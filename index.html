@@ -182,6 +182,45 @@
         <span id="toastMessage" class="text-xs font-medium">Pesan Notifikasi</span>
     </div>
 
+    <!-- Firebase SDK Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Konfigurasi Firebase milik Anda
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsAfFg_Q5ay9_1pt_vTVizfqb0Ylo2KFE",
+            authDomain: "appriyan.firebaseapp.com",
+            projectId: "appriyan",
+            storageBucket: "appriyan.firebasestorage.app",
+            messagingSenderId: "620366081632",
+            appId: "1:620366081632:web:6ffd14a3247ac169c9dd05",
+            measurementId: "G-KEQ0CXWRT6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const docRef = doc(db, "app_data", "links_riyan");
+
+        // Simpan fungsi ke global scope agar tersinkron otomatis
+        window.dbSync = {
+            saveData: async function(data) {
+                try {
+                    await setDoc(docRef, { links: data });
+                } catch(e) {
+                    console.error("Gagal menyimpan ke Firebase Firestore: ", e);
+                }
+            },
+            listenData: function(callback) {
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists() && docSnap.data().links) {
+                        callback(docSnap.data().links);
+                    }
+                });
+            }
+        };
+    </script>
+
     <script>
         // Preset Icon list
         const availableIcons = [
@@ -200,7 +239,7 @@
             { id: 'sky', border: 'hover:border-sky-500/50', iconBg: 'bg-sky-500/10 text-sky-400', badge: 'bg-sky-500/10 text-sky-400 border-sky-500/20' }
         ];
 
-        // Default initial data if localStorage is empty
+        // Default initial data jika belum ada di database
         const defaultLinks = [
             {
                 id: 'def-1',
@@ -249,6 +288,18 @@
             renderColorPicker();
             renderCategoryFilters();
             renderAppGrid();
+
+            // Hubungkan ke Sinkronisasi Realtime Firebase
+            setTimeout(() => {
+                if (window.dbSync) {
+                    window.dbSync.listenData((cloudLinks) => {
+                        appLinks = cloudLinks;
+                        localStorage.setItem('my_app_launcher_links', JSON.stringify(appLinks));
+                        renderCategoryFilters();
+                        renderAppGrid();
+                    });
+                }
+            }, 500);
         });
 
         function loadStoredLinks() {
@@ -267,6 +318,9 @@
 
         function saveToLocalStorage() {
             localStorage.setItem('my_app_launcher_links', JSON.stringify(appLinks));
+            if (window.dbSync) {
+                window.dbSync.saveData(appLinks);
+            }
         }
 
         function renderCategoryFilters() {
@@ -326,7 +380,6 @@
                 
                 // Directly click to launch URL in new tab
                 card.onclick = (e) => {
-                    // Check if click was NOT on edit or delete action buttons
                     if (!e.target.closest('.action-btn')) {
                         let finalUrl = link.url;
                         if (!/^https?:\/\//i.test(finalUrl)) {
@@ -408,7 +461,6 @@
                 };
                 const isSelected = selectedColor === scheme.id;
                 
-                // Set color dots mapping
                 const colorMap = {
                     indigo: 'bg-indigo-500',
                     emerald: 'bg-emerald-500',
@@ -492,13 +544,11 @@
             let url = document.getElementById('linkUrl').value.trim();
             const category = document.getElementById('linkCategory').value;
 
-            // Ensure protocol prepended if missing
             if (!/^https?:\/\//i.test(url)) {
                 url = 'https://' + url;
             }
 
             if (id) {
-                // Update existing item
                 const index = appLinks.findIndex(l => l.id === id);
                 if (index !== -1) {
                     appLinks[index] = {
@@ -512,7 +562,6 @@
                     showToast('Berhasil mengemaskini link menu');
                 }
             } else {
-                // Add new item
                 const newLink = {
                     id: 'link-' + Date.now(),
                     title,
@@ -604,4 +653,3 @@
     </script>
 </body>
 </html>
-```
