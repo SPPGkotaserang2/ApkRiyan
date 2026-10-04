@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Riyan</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card-hover {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Navigation Header -->
+    <header class="bg-slate-800/80 backdrop-blur-md border-b border-slate-700/60 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-indigo-500 to-purple-500 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid fa-rocket text-xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">APLIKASI RIYAN</h1>
+                    <p class="text-xs text-slate-400 hidden sm:block">Kelola & Akses Cepat Tautan Favorit Anda</p>
+                </div>
+            </div>
+
+            <!-- Action Header Buttons -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <button onclick="exportData()" title="Ekspor Backup" class="p-2 sm:px-3 sm:py-2 text-xs font-medium text-slate-300 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors border border-slate-600/50 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-download"></i>
+                    <span class="hidden md:inline">Ekspor</span>
+                </button>
+                <label title="Impor Backup" class="p-2 sm:px-3 sm:py-2 text-xs font-medium text-slate-300 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors border border-slate-600/50 flex items-center space-x-1.5 cursor-pointer">
+                    <i class="fa-solid fa-upload"></i>
+                    <span class="hidden md:inline">Impor</span>
+                    <input type="file" id="importFile" accept=".json" onchange="importData(event)" class="hidden">
+                </label>
+                <button onclick="openModal()" class="px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Tambah Sistem</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+        <!-- Search and Filter Bar -->
+        <section class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <!-- Search Input -->
+            <div class="relative w-full sm:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" id="searchInput" placeholder="Cari aplikasi atau link..." oninput="renderAppGrid()" 
+                    class="w-full bg-slate-800/90 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all">
+            </div>
+
+            <!-- Category Filter Pills -->
+            <div id="categoryFilter" class="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 no-scrollbar">
+                <!-- Dynamic categories populated via JS -->
+            </div>
+        </section>
+
+        <!-- App Menu Grid -->
+        <section id="appGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
+            <!-- Cards will be dynamically injected here -->
+        </section>
+
+        <!-- Empty State Container -->
+        <div id="emptyState" class="hidden flex-col items-center justify-center py-16 text-center">
+            <div class="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center text-slate-500 mb-4 border border-slate-700/50">
+                <i class="fa-solid fa-folder-open text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-slate-300">Tautan Tidak Ditemukan</h3>
+            <p class="text-xs text-slate-500 max-w-sm mt-1">Coba gunakan kata kunci lain atau tambahkan link menu baru sekarang.</p>
+            <button onclick="openModal()" class="mt-4 px-4 py-2 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl transition-colors">
+                + Tambah Sistem
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Modal Add/Edit Link -->
+    <div id="linkModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-slate-800 border border-slate-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl transform scale-95 transition-transform duration-200" id="modalContainer">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-slate-700/60 mb-5">
+                <h3 id="modalTitle" class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-indigo-400"></i>
+                    <span>Tambah Menu Sistem</span>
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200 p-1 rounded-lg transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="linkForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <input type="hidden" id="linkId">
+
+                <!-- Title Input -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nama Aplikasi / Tautan *</label>
+                    <input type="text" id="linkTitle" required placeholder="Contoh: WhatsApp, ChatGPT" 
+                        class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500">
+                </div>
+
+                <!-- URL Input -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">URL Alamat Tautan *</label>
+                    <input type="url" id="linkUrl" required placeholder="https://web.whatsapp.com" 
+                        class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500">
+                </div>
+
+                <!-- Category Select -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Kategori</label>
+                    <select id="linkCategory" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500">
+                        <option value="Kerja">Kerja</option>
+                        <option value="Sosmed">Sosmed</option>
+                        <option value="Tools">Tools</option>
+                        <option value="Hiburan">Hiburan</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+
+                <!-- Icon Picker -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Pilih Ikon</label>
+                    <div class="grid grid-cols-6 gap-2 bg-slate-900/50 p-2.5 rounded-xl border border-slate-700/60 max-h-28 overflow-y-auto" id="iconPicker">
+                        <!-- Icons rendered via JS -->
+                    </div>
+                </div>
+
+                <!-- Color Theme Picker -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Skema Warna Kartu</label>
+                    <div class="flex items-center space-x-3 pt-1" id="colorPicker">
+                        <!-- Color buttons rendered via JS -->
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-700/60">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700/60 rounded-xl transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-600/30 transition-all">
+                        Simpan Menu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-slate-100 px-4 py-3 rounded-xl border border-slate-700 shadow-xl flex items-center space-x-3 translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMessage" class="text-xs font-medium">Pesan Notifikasi</span>
+    </div>
+
+    <script>
+        // Preset Icon list
+        const availableIcons = [
+            'fa-globe', 'fa-briefcase', 'fa-message', 'fa-share-nodes', 'fa-wrench', 
+            'fa-film', 'fa-gamepad', 'fa-code', 'fa-shop', 'fa-book', 
+            'fa-envelope', 'fa-image', 'fa-music', 'fa-chart-line', 'fa-cloud', 'fa-folder'
+        ];
+
+        // Preset Color Schemes (Gradasi Tailwind)
+        const colorSchemes = [
+            { id: 'indigo', border: 'hover:border-indigo-500/50', iconBg: 'bg-indigo-500/10 text-indigo-400', badge: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
+            { id: 'emerald', border: 'hover:border-emerald-500/50', iconBg: 'bg-emerald-500/10 text-emerald-400', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+            { id: 'amber', border: 'hover:border-amber-500/50', iconBg: 'bg-amber-500/10 text-amber-400', badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+            { id: 'rose', border: 'hover:border-rose-500/50', iconBg: 'bg-rose-500/10 text-rose-400', badge: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
+            { id: 'purple', border: 'hover:border-purple-500/50', iconBg: 'bg-purple-500/10 text-purple-400', badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+            { id: 'sky', border: 'hover:border-sky-500/50', iconBg: 'bg-sky-500/10 text-sky-400', badge: 'bg-sky-500/10 text-sky-400 border-sky-500/20' }
+        ];
+
+        // Default initial data if localStorage is empty
+        const defaultLinks = [
+            {
+                id: 'def-1',
+                title: 'Google Search',
+                url: 'https://www.google.com',
+                category: 'Tools',
+                icon: 'fa-globe',
+                color: 'sky'
+            },
+            {
+                id: 'def-2',
+                title: 'WhatsApp Web',
+                url: 'https://web.whatsapp.com',
+                category: 'Sosmed',
+                icon: 'fa-message',
+                color: 'emerald'
+            },
+            {
+                id: 'def-3',
+                title: 'YouTube',
+                url: 'https://www.youtube.com',
+                category: 'Hiburan',
+                icon: 'fa-film',
+                color: 'rose'
+            },
+            {
+                id: 'def-4',
+                title: 'Canva',
+                url: 'https://www.canva.com',
+                category: 'Kerja',
+                icon: 'fa-image',
+                color: 'purple'
+            }
+        ];
+
+        // Global State
+        let appLinks = [];
+        let activeCategory = 'Semua';
+        let selectedIcon = 'fa-globe';
+        let selectedColor = 'indigo';
+
+        // Load Initial Data on Page Load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStoredLinks();
+            renderIconPicker();
+            renderColorPicker();
+            renderCategoryFilters();
+            renderAppGrid();
+        });
+
+        function loadStoredLinks() {
+            const saved = localStorage.getItem('my_app_launcher_links');
+            if (saved) {
+                try {
+                    appLinks = JSON.parse(saved);
+                } catch (e) {
+                    appLinks = [...defaultLinks];
+                }
+            } else {
+                appLinks = [...defaultLinks];
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('my_app_launcher_links', JSON.stringify(appLinks));
+        }
+
+        function renderCategoryFilters() {
+            const categories = ['Semua', ...new Set(appLinks.map(link => link.category))];
+            const filterContainer = document.getElementById('categoryFilter');
+            filterContainer.innerHTML = '';
+
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.onclick = () => {
+                    activeCategory = cat;
+                    renderCategoryFilters();
+                    renderAppGrid();
+                };
+
+                const isActive = activeCategory === cat;
+                btn.className = `px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                    isActive 
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' 
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700/70 hover:text-slate-200 border border-slate-700/50'
+                }`;
+                btn.innerText = cat;
+                filterContainer.appendChild(btn);
+            });
+        }
+
+        function renderAppGrid() {
+            const grid = document.getElementById('appGrid');
+            const emptyState = document.getElementById('emptyState');
+            const searchKeyword = document.getElementById('searchInput').value.toLowerCase().trim();
+
+            grid.innerHTML = '';
+
+            // Filter logic
+            const filteredLinks = appLinks.filter(link => {
+                const matchesCategory = activeCategory === 'Semua' || link.category === activeCategory;
+                const matchesSearch = link.title.toLowerCase().includes(searchKeyword) || link.url.toLowerCase().includes(searchKeyword);
+                return matchesCategory && matchesSearch;
+            });
+
+            if (filteredLinks.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            }
+
+            grid.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+
+            filteredLinks.forEach(link => {
+                const scheme = colorSchemes.find(s => s.id === link.color) || colorSchemes[0];
+                
+                const card = document.createElement('div');
+                card.className = `group relative bg-slate-800/90 border border-slate-700/70 rounded-2xl p-4 flex flex-col justify-between card-hover cursor-pointer ${scheme.border} hover:shadow-xl hover:shadow-indigo-500/5`;
+                
+                // Directly click to launch URL in new tab
+                card.onclick = (e) => {
+                    // Check if click was NOT on edit or delete action buttons
+                    if (!e.target.closest('.action-btn')) {
+                        let finalUrl = link.url;
+                        if (!/^https?:\/\//i.test(finalUrl)) {
+                            finalUrl = 'https://' + finalUrl;
+                        }
+                        window.open(finalUrl, '_blank', 'noopener,noreferrer');
+                    }
+                };
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center ${scheme.iconBg} font-bold transition-transform group-hover:scale-110">
+                                <i class="fa-solid ${link.icon || 'fa-globe'} text-lg"></i>
+                            </div>
+                            <!-- Action Buttons -->
+                            <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="openEditModal('${link.id}', event)" title="Edit" class="action-btn p-1.5 text-slate-400 hover:text-indigo-400 rounded-lg hover:bg-slate-700/60 transition-colors">
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <button onclick="deleteLink('${link.id}', event)" title="Hapus" class="action-btn p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-700/60 transition-colors">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <h3 class="font-semibold text-slate-100 text-sm truncate mb-0.5 group-hover:text-indigo-300 transition-colors" title="${escapeHtml(link.title)}">
+                            ${escapeHtml(link.title)}
+                        </h3>
+                        <p class="text-[11px] text-slate-400 truncate" title="${escapeHtml(link.url)}">
+                            ${cleanUrlDisplay(link.url)}
+                        </p>
+                    </div>
+
+                    <div class="mt-4 pt-2.5 border-t border-slate-700/40 flex items-center justify-between">
+                        <span class="text-[10px] px-2 py-0.5 rounded-md border font-medium ${scheme.badge}">
+                            ${escapeHtml(link.category)}
+                        </span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-500 group-hover:text-slate-300 transition-colors"></i>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        function renderIconPicker() {
+            const picker = document.getElementById('iconPicker');
+            picker.innerHTML = '';
+
+            availableIcons.forEach(iconClass => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => {
+                    selectedIcon = iconClass;
+                    renderIconPicker();
+                };
+                const isSelected = selectedIcon === iconClass;
+                btn.className = `p-2 rounded-lg flex items-center justify-center transition-all ${
+                    isSelected 
+                        ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-900' 
+                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                }`;
+                btn.innerHTML = `<i class="fa-solid ${iconClass} text-sm"></i>`;
+                picker.appendChild(btn);
+            });
+        }
+
+        function renderColorPicker() {
+            const picker = document.getElementById('colorPicker');
+            picker.innerHTML = '';
+
+            colorSchemes.forEach(scheme => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => {
+                    selectedColor = scheme.id;
+                    renderColorPicker();
+                };
+                const isSelected = selectedColor === scheme.id;
+                
+                // Set color dots mapping
+                const colorMap = {
+                    indigo: 'bg-indigo-500',
+                    emerald: 'bg-emerald-500',
+                    amber: 'bg-amber-500',
+                    rose: 'bg-rose-500',
+                    purple: 'bg-purple-500',
+                    sky: 'bg-sky-500'
+                };
+
+                btn.className = `w-7 h-7 rounded-full ${colorMap[scheme.id]} flex items-center justify-center transition-transform ${
+                    isSelected ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-800' : 'opacity-70 hover:opacity-100'
+                }`;
+                if (isSelected) {
+                    btn.innerHTML = `<i class="fa-solid fa-check text-slate-950 text-xs font-bold"></i>`;
+                }
+                picker.appendChild(btn);
+            });
+        }
+
+        function openModal(isEdit = false) {
+            const modal = document.getElementById('linkModal');
+            const container = document.getElementById('modalContainer');
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                container.classList.remove('scale-95');
+                container.classList.add('scale-100');
+            }, 10);
+
+            if (!isEdit) {
+                document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-plus text-indigo-400"></i><span>Tambah Menu Sistem</span>`;
+                document.getElementById('linkForm').reset();
+                document.getElementById('linkId').value = '';
+                selectedIcon = 'fa-globe';
+                selectedColor = 'indigo';
+                renderIconPicker();
+                renderColorPicker();
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('linkModal');
+            const container = document.getElementById('modalContainer');
+            
+            modal.classList.add('opacity-0');
+            container.classList.remove('scale-100');
+            container.classList.add('scale-95');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function openEditModal(id, event) {
+            if (event) event.stopPropagation();
+
+            const link = appLinks.find(l => l.id === id);
+            if (!link) return;
+
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-pen text-indigo-400"></i><span>Edit Menu Link</span>`;
+            document.getElementById('linkId').value = link.id;
+            document.getElementById('linkTitle').value = link.title;
+            document.getElementById('linkUrl').value = link.url;
+            document.getElementById('linkCategory').value = link.category;
+
+            selectedIcon = link.icon || 'fa-globe';
+            selectedColor = link.color || 'indigo';
+
+            renderIconPicker();
+            renderColorPicker();
+
+            openModal(true);
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('linkId').value;
+            const title = document.getElementById('linkTitle').value.trim();
+            let url = document.getElementById('linkUrl').value.trim();
+            const category = document.getElementById('linkCategory').value;
+
+            // Ensure protocol prepended if missing
+            if (!/^https?:\/\//i.test(url)) {
+                url = 'https://' + url;
+            }
+
+            if (id) {
+                // Update existing item
+                const index = appLinks.findIndex(l => l.id === id);
+                if (index !== -1) {
+                    appLinks[index] = {
+                        ...appLinks[index],
+                        title,
+                        url,
+                        category,
+                        icon: selectedIcon,
+                        color: selectedColor
+                    };
+                    showToast('Berhasil mengemaskini link menu');
+                }
+            } else {
+                // Add new item
+                const newLink = {
+                    id: 'link-' + Date.now(),
+                    title,
+                    url,
+                    category,
+                    icon: selectedIcon,
+                    color: selectedColor
+                };
+                appLinks.unshift(newLink);
+                showToast('Link menu baru berhasil disimpan');
+            }
+
+            saveToLocalStorage();
+            renderCategoryFilters();
+            renderAppGrid();
+            closeModal();
+        }
+
+        function deleteLink(id, event) {
+            if (event) event.stopPropagation();
+
+            const link = appLinks.find(l => l.id === id);
+            if (!link) return;
+
+            if (confirm(`Apakah Anda yakin ingin menghapus "${link.title}"?`)) {
+                appLinks = appLinks.filter(l => l.id !== id);
+                saveToLocalStorage();
+                renderCategoryFilters();
+                renderAppGrid();
+                showToast('Menu berhasil dihapus');
+            }
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appLinks, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `app_launcher_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('Backup data berhasil diunduh');
+        }
+
+        function importData(event) {
+            const fileReader = new FileReader();
+            fileReader.onload = function(e) {
+                try {
+                    const importedLinks = JSON.parse(e.target.result);
+                    if (Array.isArray(importedLinks)) {
+                        appLinks = importedLinks;
+                        saveToLocalStorage();
+                        renderCategoryFilters();
+                        renderAppGrid();
+                        showToast('Data berhasil diimpor!');
+                    } else {
+                        alert('Format file JSON tidak valid.');
+                    }
+                } catch (err) {
+                    alert('Gagal membaca file JSON backup.');
+                }
+            };
+            if (event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0]);
+            }
+        }
+
+        function cleanUrlDisplay(url) {
+            return url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMessage');
+            
+            toastMsg.innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
+```
